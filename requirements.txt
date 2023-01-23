@@ -1,0 +1,12 @@
+graviton==0.0
+iopath==0.1.10
+matplotlib==3.5.2
+numpy==1.21.5
+pandas==1.4.4
+plotly==5.9.0
+pvc==0.3.0
+scikit_learn==1.2.0
+scipy==1.9.1
+seaborn==0.11.2
+simpledorff==0.0.2
+statsmodels==0.13.2

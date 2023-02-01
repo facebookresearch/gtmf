@@ -8,7 +8,7 @@
 import accuracy as accuracy
 
 # APIs for efficiency dimension
-import cost_efficiency as cost_efficiency
+import efficiency as efficiency
 
 # APIs for reliability dimension
 import reliability as reliability

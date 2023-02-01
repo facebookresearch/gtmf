@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from graviton import Sample
-from pvc import Dataset, load, query, upload
+from balance import Sample
+from some_query_lib import Dataset, load, query, upload
 
-PVC_LOAD_MAX_SIZE = 3e10
+some_query_lib_LOAD_MAX_SIZE = 3e10
 
 DEFAULT_QUANTILES = [0.2, 0.4, 0.6, 0.8]
 
@@ -66,7 +66,7 @@ def discretize_covariates(
         holdout_covar which need to construct new table
 
     Return:
-    a PVC data set with new discretized covariates value column and other existing columns
+    a some_query_lib data set with new discretized covariates value column and other existing columns
     """
 
     population_features = get_population_features(
@@ -215,7 +215,7 @@ def summarize_target_population(
     Params
     -------------
     popn_quantiles:
-        a PVC dataset of population with discretized covariates value column
+        a some_query_lib dataset of population with discretized covariates value column
     continuous_covars:
         continues covariate columns need to discretize
     discrete_covars:
@@ -229,7 +229,7 @@ def summarize_target_population(
 
     Return:
     -------------
-    a pvc dataset with segments corresponding to unique values of the discretized covariates.
+    a some_query_lib dataset with segments corresponding to unique values of the discretized covariates.
     The weight column represents the weight of each segment instance. SUM(weight * num_records) = 1
     Scores is a TDIGEST (histogram) of the holdout covariate
 
@@ -289,7 +289,7 @@ def sample_data_setting(
     discrete_covars,
     holdout_covar=None,
     inclusive_columns_in_sample=None,
-    equal_weight=False,  # False when not using Graviton
+    equal_weight=False,  # False when not using balance
     weight_col: Optional[str] = "weight",
 ):
     """
@@ -304,7 +304,7 @@ def sample_data_setting(
     primary_key:
         primary key for both population data table and sample data table. The primary key must be single column.
     popn_quantiles:
-        a PVC dataset of population with discretized covariates value column
+        a some_query_lib dataset of population with discretized covariates value column
     continuous_covars:
         continues covariate columns need to discretize
     discrete_covars:
@@ -322,7 +322,7 @@ def sample_data_setting(
         (Optional) column name of weight
 
     Return:
-    a PVC data set with new discretized covariates value column and other existing columns
+    a some_query_lib data set with new discretized covariates value column and other existing columns
 
     """
     sample = Dataset(namespace=sample_namespace, tablename=sample_hive_tablename)
@@ -402,7 +402,7 @@ def format_sample_features(
 
     return load(
         dataset=sample_features_formatted_ds,
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_format_sample_features",
     )
 
@@ -440,7 +440,7 @@ def format_target_popn(
 
     return load(
         dataset=format_target_popn,
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_format_target_popn",
     )
 
@@ -452,15 +452,15 @@ def process_sample_data_combined(
     continuous_covars,
     discrete_covars,
     interactions,
-    graviton_arguments,
+    balance_arguments,
     holdout_covar=None,
-    output_sample_weight_graviton_table=None,
+    output_sample_weight_balance_table=None,
     equal_weight=False,
     weight_col: Optional[str] = "weight",
 ):
     covars = continuous_covars + discrete_covars
 
-    # Load sample into Python for Graviton
+    # Load sample into Python for balance
     print("GTMF: Loading sample features...")
     sample_features_formatted = format_sample_features(
         sample_features,
@@ -471,7 +471,7 @@ def process_sample_data_combined(
         weight_col,
     )
 
-    # Load population into Python for Graviton
+    # Load population into Python for balance
     print("GTMF: Loading target popn...  -- ", weight_col)
 
     target_popn_formatted = format_target_popn(
@@ -484,8 +484,8 @@ def process_sample_data_combined(
         primary_key,
         covars,
         interactions,
-        graviton_arguments,
-        output_sample_weight_graviton_table,
+        balance_arguments,
+        output_sample_weight_balance_table,
         weight_col,
     )
 
@@ -496,8 +496,8 @@ def process_sample_data(
     primary_key,
     covars,
     interactions,
-    graviton_arguments,
-    output_sample_weight_graviton_table=None,
+    balance_arguments,
+    output_sample_weight_balance_table=None,
     weight_col: Optional[str] = "weight",
 ):
     print("GTMF: generate sample object, weight column - ", weight_col)
@@ -516,40 +516,40 @@ def process_sample_data(
 
     sampleobj = sampleobj.set_target(targetobj)
 
-    print("GTMF: getting graviton weight...")
-    if graviton_arguments:
-        graviton_kwargs = graviton_arguments
+    print("GTMF: getting balance weight...")
+    if balance_arguments:
+        balance_kwargs = balance_arguments
     else:
-        graviton_kwargs = _build_default_graviton_kwargs(covars, interactions)
+        balance_kwargs = _build_default_balance_kwargs(covars, interactions)
 
-    graviton = sampleobj.adjust(**graviton_kwargs)
+    balance_adjust = sampleobj.adjust(**balance_kwargs)
 
     # Send data back to Hive in order to calculate representativity metrics
     # With existing weights, this section can be skipped
-    sample_features_formatted[weight_col] = graviton.weights().df()
+    sample_features_formatted[weight_col] = balance_adjust.weights().df
 
-    if not output_sample_weight_graviton_table:
-        output_sample_weight_graviton_table = {}
-    output_sample_weight_graviton_table[
+    if not output_sample_weight_balance_table:
+        output_sample_weight_balance_table = {}
+    output_sample_weight_balance_table[
         "namespace"
-    ] = output_sample_weight_graviton_table.get("namespace", "datascience")
-    output_sample_weight_graviton_table[
+    ] = output_sample_weight_balance_table.get("namespace", "datascience")
+    output_sample_weight_balance_table[
         "oncall"
-    ] = output_sample_weight_graviton_table.get("oncall", "pdgt_oncall")
+    ] = output_sample_weight_balance_table.get("oncall", "pdgt_oncall")
 
     print("GTMF: uploading sample weight to hive:")
-    print(output_sample_weight_graviton_table)
+    print(output_sample_weight_balance_table)
 
-    output_sample_weight_graviton_table["dataframe"] = sample_features_formatted
+    output_sample_weight_balance_table["dataframe"] = sample_features_formatted
 
-    sample_weights = upload(**output_sample_weight_graviton_table)
+    sample_weights = upload(**output_sample_weight_balance_table)
     print(
         f"GTMF: sample weight uploaded to {sample_weights.tablename}:{sample_weights.namespace}"
     )
     return sample_weights
 
 
-def _build_default_graviton_kwargs(covars, interactions):
+def _build_default_balance_kwargs(covars, interactions):
     return dict(
         method="ipw",
         formula=[
@@ -580,7 +580,7 @@ def get_design_effect(
             ),
             custom_name="query_get_design_effect",
         ),
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_get_design_effect",
     )
     return calulate_design_effect(sample_features_formatted, weight_col)
@@ -717,7 +717,7 @@ def get_mau_coverage(
             ),
             custom_name="query_get_mau_coverage",
         ),
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_get_mau_coverage",
     )
 
@@ -792,7 +792,7 @@ def get_holdout_distn_df(
             ),
             custom_name="query_get_holdout_distn_df",
         ),
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_get_holdout_distn_df",
     )
 
@@ -911,7 +911,7 @@ def get_hellinger(
             ),
             custom_name="query_get_hellinger",
         ),
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_get_hellinger",
     )
 
@@ -920,7 +920,7 @@ def get_hellinger(
 def get_covariate_balance_df(covariate_balance):
     return load(
         covariate_balance,
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_get_covariate_balance_df",
     )
 
@@ -928,7 +928,7 @@ def get_covariate_balance_df(covariate_balance):
 def gen_plots_of_covariates(covariate_balance, covars):
     covariate_balance_df = load(
         covariate_balance,
-        max_size=PVC_LOAD_MAX_SIZE,
+        max_size=some_query_lib_LOAD_MAX_SIZE,
         custom_name="load_gen_plots_of_covariates",
     )
 
@@ -1063,7 +1063,7 @@ def parameters(parameter_name: Optional[str] = None) -> Any:
         "primary_key": "--- primary key for both population data table and sample data table. The primary key must be single column. If there are more than one in the raw data, user can construct composite key and dedup earlier",
         "hellinger_arguments": "--- dict(min_value, max_value, step) arguments are used to discretize holdout covar",
         "interaction_covar_paris": " --- (Optional) list[list] covar pairs used for weighting the sample data with default method ipx, list of covars pairs.",
-        "graviton_arguments": "--- (Optional) dict() For weight calculation, \n -adjusting sample to population by graviton. sample.adjust. User can provide method and arguments used in this function.
+        "balance_arguments": "--- (Optional) dict() For weight calculation, \n -adjusting sample to population by balance. sample.adjust. User can provide method and arguments used in this function.
         "non_covar_columns": "--- (Optional) list[str] The column name for ground truth labels or the non-covar column in sample data",
         "external_sample_weights_path": "--- (Optional) dict(namespace, tablename) external sample weight source.",
         "output_covariate_balance_df": "--- default is False, output covariate balance in dataframe format if it is set as True.",

@@ -6,7 +6,7 @@ In this repository, we introduce the GTMF library, a toolkit we developed for th
 ## Using GTMF
 
 Available APIs of each dimensions are included in the following files:
-* Representativity: [representativity.py](representativity.py). This dimension is also included in _[balance](https://import-balance.org/)_ (A python package for balancing biased data samples)
+* Representativity: [representativity.py](representativity.py). We leverage [Balance](https://import-balance.org/)(A Meta open sourced package for balancing biased data samples) to calculate the sample weights internally. It also covers several metrics that we include in GTMF library.
 * Auccuracy: [accuracy.py](accuracy.py)
 * Reliability: [reliability.py](reliability.py)
 * Metric variance: [metric_variance.py](metric_variance.py)

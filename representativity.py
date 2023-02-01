@@ -12,7 +12,7 @@ from metrics.representativity import (  # noqa
     get_covariate_balance,
     get_covariate_balance_df,
     get_design_effect,
-    get_graviton_sample_weight,
+    get_balance_sample_weight,
     get_hellinger,
     get_holdout_distn_df,
     get_mau_coverage,

@@ -8,6 +8,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # Representativity dimension in GTMF is implemented via SQL/Hive. We also include this part in the Open Source package Balance. Please refer to following link for more information: https://import-balance.org/.
+# To make it run, you need a package to replace "some_query_lib" which could query using SQL on your data
 
 from typing import Any, Dict, List, Optional
 

@@ -6,6 +6,7 @@
 
 
 # Representativity dimension in GTMF is implemented via SQL/Hive. We also include this part in the Open Source package Balance. Please refer to following link for more information: https://import-balance.org/.
+# To make it run, you need a package to replace "some_query_lib" which could query using SQL on your data
 from metrics.representativity import (  # noqa
     gen_plot_distribution_of_hold_out,
     get_asmd,
